@@ -2,12 +2,21 @@
 
 namespace def::math
 {
+	float PI = 3.1415926f;
+
+	float deg2rad(float a) { return a / 180.0f * PI; }
+	float rad2deg(float a) { return a / PI * 180.0f; }
+
 	template <class T>
 	struct Vector3
 	{
 		Vector3(T x = (T)0, T y = (T)0, T z = (T)0, T w = (T)1);
 
-		T x, y, z, w;
+		union
+		{
+			struct { T x, y, z, w; };
+			T xyzw[4];
+		};
 
 		Vector3<T>& operator=(const Vector3<T>& v);
 
@@ -92,16 +101,86 @@ namespace def::math
 	typedef Vector3<float> Vector3f;
 	typedef Vector3<double> Vector3d;
 
-	typedef Vector3i Tex3i;
-	typedef Vector3f Tex3f;
-	typedef Vector3d Tex3d;
+	template <class T>
+	struct Tex3
+	{
+		Tex3(T u = (T)0, T v = (T)0, T w = (T)1);
+
+		union
+		{
+			struct { T u, v, w; };
+			T uvw[3];
+		};
+
+		Tex3<T>& operator=(const Tex3<T>& v);
+
+		Tex3<T> operator+(const Tex3<T>& v) const;
+		Tex3<T> operator-(const Tex3<T>& v) const;
+		Tex3<T> operator*(const Tex3<T>& v) const;
+		Tex3<T> operator/(const Tex3<T>& v) const;
+		Tex3<T> operator+(const T& v) const;
+		Tex3<T> operator-(const T& v) const;
+		Tex3<T> operator*(const T& v) const;
+		Tex3<T> operator/(const T& v) const;
+
+		Tex3<T>& operator+=(const Tex3<T>& v);
+		Tex3<T>& operator-=(const Tex3<T>& v);
+		Tex3<T>& operator*=(const Tex3<T>& v);
+		Tex3<T>& operator/=(const Tex3<T>& v);
+		Tex3<T>& operator+=(const T& v);
+		Tex3<T>& operator-=(const T& v);
+		Tex3<T>& operator*=(const T& v);
+		Tex3<T>& operator/=(const T& v);
+
+		bool operator==(const Tex3<T>& v) const;
+		bool operator!=(const Tex3<T>& v) const;
+
+		friend Tex3<T> operator*(const float& lhs, const Tex3<T>& rhs)
+		{
+			return Tex3<T>((T)(lhs * (float)rhs.u), (T)(lhs * (float)rhs.v), (T)(lhs * (float)rhs.w));
+		}
+
+		friend Tex3<T> operator*(const double& lhs, const Tex3<T>& rhs)
+		{
+			return Tex3<T>((T)(lhs * (double)rhs.u), (T)(lhs * (double)rhs.v), (T)(lhs * (double)rhs.w));
+		}
+
+		friend Tex3<T> operator*(const int& lhs, const Tex3<T>& rhs)
+		{
+			return Tex3<T>((T)(lhs * (int)rhs.u), (T)(lhs * (int)rhs.v), (T)(lhs * (int)rhs.w));
+		}
+
+		friend Tex3<T> operator/(const float& lhs, const Tex3<T>& rhs)
+		{
+			return Tex3<T>((T)(lhs / (float)rhs.u), (T)(lhs / (float)rhs.v), (T)(lhs / (float)rhs.w));
+		}
+
+		friend Tex3<T> operator/(const double& lhs, const Tex3<T>& rhs)
+		{
+			return Tex3<T>((T)(lhs / (double)rhs.u), (T)(lhs / (double)rhs.v), (T)(lhs / (double)rhs.w));
+		}
+
+		friend Tex3<T> operator/(const int& lhs, const Tex3<T>& rhs)
+		{
+			return Tex3<T>((T)(lhs / (int)rhs.u), (T)(lhs / (int)rhs.v), (T)(lhs / (int)rhs.w));
+		}
+
+		operator Tex3<int>()	const;
+		operator Tex3<float>() const;
+		operator Tex3<double>() const;
+
+		void swap(Tex3<T>& v);
+		Tex3<T>& ref();
+	};
+
+	typedef Tex3<int> Tex3i;
+	typedef Tex3<float> Tex3f;
+	typedef Tex3<double> Tex3d;
 
 	struct Matrix
 	{
 		Matrix() = default;
 		Matrix(float mat[16]);
-
-		float m[4][4]{ 0.0f };
 
 		void clear();
 
@@ -110,7 +189,7 @@ namespace def::math
 		void point_at(const Vector3f& pos, const Vector3f& target, const Vector3f& up);
 		void quick_inverse(const Matrix& mat);
 		void inverse(const Matrix& mat);
-		void view(const Vector3f& up, const Vector3f& target, const Vector3f& pos, Vector3f& lookDir, float yaw);
+		void view(const Vector3f& up, const Vector3f& target, const Vector3f& pos, Vector3f& dir, const Vector3f& rot);
 
 		Matrix operator*(const Matrix& mat);
 		Vector3f operator*(const Vector3f& v);
@@ -120,6 +199,12 @@ namespace def::math
 		void rotate_y(float a);
 		void rotate_z(float a);
 		void scale(float x, float y, float z);
+
+		float* operator[](size_t i) { return m[i]; }
+		const float* operator[](size_t i) const { return m[i]; }
+
+	private:
+		float m[4][4]{ 0.0f };
 	};
 
 #ifdef DEF_MATH_3D
@@ -135,10 +220,10 @@ namespace def::math
 
 	template <class T> Vector3<T>& Vector3<T>::operator=(const Vector3<T>& v)
 	{
-		x = v.x;
-		y = v.y;
-		z = v.z;
-		w = v.w;
+		this->x = v.x;
+		this->y = v.y;
+		this->z = v.z;
+		this->w = v.w;
 		return ref();
 	}
 
@@ -258,6 +343,110 @@ namespace def::math
 		return ref() + (end - ref()) * t;
 	}
 
+	template <class T> Tex3<T>::Tex3(T u, T v, T w)
+	{
+		this->u = u;
+		this->v = v;
+		this->w = w;
+	}
+
+	template <class T> Tex3<T>& Tex3<T>::operator=(const Tex3<T>& v)
+	{
+		this->u = v.u;
+		this->v = v.v;
+		this->w = v.w;
+		return ref();
+	}
+
+	template <class T> Tex3<T> Tex3<T>::operator+(const Tex3<T>& v) const { return Tex3<T>(this->u + v.u, this->v + v.v, this->w + v.w); }
+	template <class T> Tex3<T> Tex3<T>::operator-(const Tex3<T>& v) const { return Tex3<T>(this->u - v.u, this->v - v.v, this->w - v.w); }
+	template <class T> Tex3<T> Tex3<T>::operator*(const Tex3<T>& v) const { return Tex3<T>(this->u * v.u, this->v * v.v, this->w * v.w); }
+	template <class T> Tex3<T> Tex3<T>::operator/(const Tex3<T>& v) const { return Tex3<T>(this->u / v.u, this->v / v.v, this->w / v.w); }
+	template <class T> Tex3<T> Tex3<T>::operator+(const T& v) const { return Tex3<T>(this->u + v, this->v + v, this->w + v); }
+	template <class T> Tex3<T> Tex3<T>::operator-(const T& v) const { return Tex3<T>(this->u - v, this->v - v, this->w - v); }
+	template <class T> Tex3<T> Tex3<T>::operator*(const T& v) const { return Tex3<T>(this->u * v, this->v * v, this->w * v); }
+	template <class T> Tex3<T> Tex3<T>::operator/(const T& v) const { return Tex3<T>(this->u / v, this->v / v, this->w / v); }
+
+	template <class T> Tex3<T>& Tex3<T>::operator+=(const Tex3<T>& v)
+	{
+		this->u += v.u;
+		this->v += v.v;
+		this->w += v.w;
+		return ref();
+	}
+
+	template <class T> Tex3<T>& Tex3<T>::operator-=(const Tex3<T>& v)
+	{
+		this->u -= v.u;
+		this->v -= v.v;
+		this->w -= v.w;
+		return ref();
+	}
+
+	template <class T> Tex3<T>& Tex3<T>::operator*=(const Tex3<T>& v)
+	{
+		this->u *= v.u;
+		this->v *= v.v;
+		this->w *= v.w;
+		return ref();
+	}
+
+	template <class T> Tex3<T>& Tex3<T>::operator/=(const Tex3<T>& v)
+	{
+		this->u /= v.u;
+		this->v /= v.v;
+		this->w /= v.w;
+		return ref();
+	}
+
+	template <class T> Tex3<T>& Tex3<T>::operator+=(const T& v)
+	{
+		this->u += v;
+		this->v += v;
+		this->w += v;
+		return ref();
+	}
+
+	template <class T> Tex3<T>& Tex3<T>::operator-=(const T& v)
+	{
+		this->u -= v;
+		this->v -= v;
+		this->w -= v;
+		return ref();
+	}
+
+	template <class T> Tex3<T>& Tex3<T>::operator*=(const T& v)
+	{
+		this->u *= v;
+		this->v *= v;
+		this->w *= v;
+		return ref();
+	}
+
+	template <class T> Tex3<T>& Tex3<T>::operator/=(const T& v)
+	{
+		this->u /= v;
+		this->v /= v;
+		this->w /= v;
+		return ref();
+	}
+
+	template <class T> bool Tex3<T>::operator==(const Tex3<T>& v) const { return this->u == v.u && this->v == v.v && this->w == v.w; }
+	template <class T> bool Tex3<T>::operator!=(const Tex3<T>& v) const { return this->u != v.u || this->v != v.v || this->w != v.w; }
+
+	template <class T> Tex3<T>::operator Tex3<int>() const { return { static_cast<int32_t>(this->u), static_cast<int32_t>(this->v), static_cast<int32_t>(this->w) }; }
+	template <class T> Tex3<T>::operator Tex3<float>() const { return { static_cast<float>(this->u), static_cast<float>(this->v), static_cast<float>(this->w) }; }
+	template <class T> Tex3<T>::operator Tex3<double>() const { return { static_cast<double>(this->u), static_cast<double>(this->v), static_cast<double>(this->w) }; }
+
+	template <class T> void Tex3<T>::swap(Tex3<T>& v)
+	{
+		std::swap(this->u, v.u);
+		std::swap(this->v, v.v);
+		std::swap(this->w, v.w);
+	}
+
+	template <class T> Tex3<T>& Tex3<T>::ref() { return *this; }
+
 	Matrix::Matrix(float mat[16])
 	{
 		for (int x = 0; x < 4; x++)
@@ -267,12 +456,12 @@ namespace def::math
 
 	void Matrix::clear()
 	{
-		memset(m, 0, sizeof(m));
+		memset(m, 0, sizeof(float) * 16);
 	}
 
-	void Matrix::projection(float fovRad, float aspectRatio, float near, float far)
+	void Matrix::projection(float fovDeg, float aspectRatio, float near, float far)
 	{
-		float fov = 1.0f / tanf(fovRad * 0.5f);
+		float fov = 1.0f / tanf(fovDeg * 0.5f / 180.0f * 3.14159f);
 		m[0][0] = aspectRatio * fov;
 		m[1][1] = fov;
 		m[2][2] = far / (far - near);
@@ -410,15 +599,17 @@ namespace def::math
 		m[3][3] = 1.0f;
 	}
 
-	void Matrix::view(const Vector3f& up, const Vector3f& target, const Vector3f& pos, Vector3f& lookDir, float yaw)
+	void Matrix::view(const Vector3f& up, const Vector3f& target, const Vector3f& pos, Vector3f& dir, const Vector3f& rot)
 	{
-		Matrix cameraRotMat;
-		cameraRotMat.rotate_y(yaw);
+		Matrix rotMatX, rotMatY, rotMatZ;
+		rotMatX.rotate_x(rot.x);
+		rotMatY.rotate_y(rot.y);
+		rotMatZ.rotate_z(rot.z);
 
-		lookDir = cameraRotMat * target;
+		dir = rotMatX * rotMatY * rotMatZ * target;
 
 		Matrix cameraMat;
-		cameraMat.point_at(pos, pos + lookDir, up);
+		cameraMat.point_at(pos, pos + dir, up);
 
 		quick_inverse(cameraMat);
 	}

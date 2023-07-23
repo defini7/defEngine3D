@@ -144,7 +144,7 @@
     <ClInclude Include="defMath3D.hpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="Examples\TexturedCube.cpp" />
+    <ClCompile Include="Source.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
