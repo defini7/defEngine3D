@@ -4,8 +4,6 @@
 * TODO:
 * - Lighting
 * - Mipmapping
-* - Texture sampling
-* - Perspective correction !!!
 */
 
 #include "defGameEngine.h"
